@@ -1,4 +1,8 @@
-# DEV
+# TRANSLATOR APP
+
+**Updates** 
+Now with synthesizer and voice recognition
+
 ## Prerequisites
 
 Before starting, make sure you have the following programs installed:
@@ -14,7 +18,7 @@ Before starting, make sure you have the following programs installed:
    Use the following command to clone the remote repository to your local machine. Make sure to replace `REPOSITORY_URL` with the actual URL of the repository.
 
    ```sh
-   git clone https://github.com/kleecollage/ImpuestosApp-Jetpack.git
+   git clone https://github.com/kleecollage/Translator-JetpackApp.git
 
 1. **Import the Project**
    On Android Studio select "Open an existing Android Studio project".
