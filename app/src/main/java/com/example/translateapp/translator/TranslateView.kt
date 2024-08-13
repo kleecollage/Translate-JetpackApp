@@ -1,5 +1,7 @@
 package com.example.translateapp.translator
 
+import android.Manifest
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -21,7 +23,9 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -32,7 +36,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import com.example.translateapp.R
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.isGranted
+import com.google.accompanist.permissions.rememberPermissionState
 
+@OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun TranslateView(viewModel: TranslateViewModel) {
     val state = viewModel.state
@@ -40,12 +49,28 @@ fun TranslateView(viewModel: TranslateViewModel) {
     val keyboardController = LocalSoftwareKeyboardController.current
     val languageOptions = viewModel.languageOptions
     val itemSelection = viewModel.itemSelection
-    var indexSource by remember { mutableStateOf(0) }
-    var indexTarget by remember { mutableStateOf(1) }
+    val itemVoice = viewModel.itemsVoice
+    var indexSource by remember { mutableIntStateOf(0) }
+    var indexTarget by remember { mutableIntStateOf(1) }
     var expandSource by remember { mutableStateOf(false) }
     var expandTarget by remember { mutableStateOf(false) }
     var selectedSourceLang by remember { mutableStateOf(languageOptions[0]) }
     var selectedTargetLang by remember { mutableStateOf(languageOptions[1]) }
+    var selectedTargetVoice by remember { mutableStateOf(itemVoice[1]) }
+    val permissionState = rememberPermissionState(permission = Manifest.permission.RECORD_AUDIO)
+
+    SideEffect {
+        permissionState.launchPermissionRequest()
+    }
+
+    val speechRecognitionLauncher = rememberLauncherForActivityResult(
+        contract = SpeechRecognizerContract()) {
+        viewModel.onValue(
+             it.toString()
+            .replace("[", "")
+            .replace("]", "")
+            .trimStart())
+    }
 
     Column(
         modifier = Modifier
@@ -82,6 +107,7 @@ fun TranslateView(viewModel: TranslateViewModel) {
                 onClickItem = { index ->
                     indexTarget = index
                     selectedTargetLang = languageOptions[index]
+                    selectedTargetVoice = itemVoice[index]
                     expandTarget = false
                 }
             )
@@ -113,6 +139,30 @@ fun TranslateView(viewModel: TranslateViewModel) {
             modifier = Modifier.fillMaxWidth()
         )
 
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            MainIconButton(icon = R.drawable.mic) {
+                if (permissionState.status.isGranted) {
+                    speechRecognitionLauncher.launch(Unit)
+                } else  {
+                    permissionState.launchPermissionRequest()
+                }
+            }
+            MainIconButton(icon = R.drawable.translate) {
+                viewModel.onTranslate(
+                    state.textToTanslate,
+                    context,
+                    selectedSourceLang,
+                    selectedTargetLang
+                )
+            }
+            MainIconButton(icon = R.drawable.speek) {
+                viewModel.textToSpeech(context, selectedTargetVoice)
+            }
+            MainIconButton(icon = R.drawable.delete) {
+                viewModel.clean()
+            }
+        }
+
         if (state.isDownloading) {
             CircularProgressIndicator()
             Text(text = "Descargando Modelo ...")
@@ -126,7 +176,9 @@ fun TranslateView(viewModel: TranslateViewModel) {
                     focusedBorderColor = Color.Transparent,
                     unfocusedBorderColor = Color.Transparent
                 ),
-                modifier = Modifier.fillMaxWidth().fillMaxHeight()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .fillMaxHeight()
             )
         }
 
